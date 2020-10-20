@@ -1,36 +1,9 @@
 clear all
 cd "C:\Users\user\Documents\endes"
 ****
-u rech4, clear
-rename _all, lower
-***idxh4 y hhidx es igual a hc0 por lo que es necesario renombrar para el merge
-rename idxh4 hc0
-save rech4, replace
-
-********<<<<<<<<<<Desde aquí
-*** Información a nivel de hogar
-u rech23, clear
-merge 1:1 hhid using rech0, nogen
-save rech23_0, replace
-*** Información a nivel de individuos
-u rech1, clear
-rename hvidx hc0
-merge 1:1 hhid hc0 using rech4, nogen
-merge 1:1 hhid hc0 using rech6
-rename _m rech6
-save rech1_46, replace
-merge m:1 hhid using rech23_0
-**mod programas sociales
-rename _merge rechf
-merge m:1 hhid using progsoc
+u b_endes, clear
 **violencia
-rename _merge repro
-g id="  "
-egen caseid=concat(hhid id hc0)
 merge m:1 caseid using re84dv
-**mod muj
-rename _merge viol
-merge m:1 caseid using rec0111
 
 save rechf, replace
 
@@ -68,177 +41,7 @@ label values dpto dpto
 
 
 ****
-***ELECTRICIDAD
-fre hv206 [iw=peso] if hv101==1 
 
-tab hv206 if hv101==1
-
-svyset hv001 [w=peso], strata(hv022)
-svy:proportion hv206 if hv101==1 
-
-***AGUA TRATADA
-*proviene de la red pública o de aquella que no proviniendo de la red pública le dan algún tratamiento en el hogar antes de beberla; tal como: la hierven, clorifican, desinfectan solamente, o consumen agua embotellada. 
-replace hv201=hv202 if hv201==.
-g agua=(hv201==11 | (hv201>11 & sh227<3)) | (hv201==11 | (hv201>11 & (hv237a==1 | hv237b==1 | hv237e==1))) | hv201==71
-tab agua [iw=peso] if hv101==1
-tab area agua [iw=peso] if hv101==1, row nofreq
-***CASI TERMINADO
-
-***SANEAMIENTO BÁSICO***casos sin ponderar coincide con excel articulado nutricional
-fre hv205
-recode hv205 (11/23=1 "con saneamiento") (24/96=0 "sin saneamiento"), g(desa)
-tab desa [iw=peso] if hv101==1
-
-table area [aw=peso] if hv101==1, c(m desa) f(%9.3f) row
-*dominio de residencia
-table shregion [aw=peso] if hv101==1, c(m desa) f(%9.3f) row
-*ambito geográfico
-table ambito [aw=peso] if hv101==1, c(m desa) f(%9.3f) row
-*riqueza
-table hv270 [aw=peso] if hv101==1, c(m desa) f(%9.3f) row
-*departamentos
-table dpto [aw=peso] if hv101==1, c(m desa) f(%9.3f) row
-
-
-
-
-
-
-
-
-
-
-**dci
-g desnwho=1 if hc70<-200 & hv103==1
-replace desnwho=0 if hc70>=-200 & hc70<601 & hv103==1
-label define desnwho 1 "con desnutrición crónica" 0 "sin desnutrición crónica"
-label value desnwho desnwho
-tab desnwho [iw=peso]
-*total y por área de residencia
-tab area desnwho [iw=peso], row
-**sin ponderar --> ver cuadro 2 dc oms articulado nutricional
-tab area desnwho, row
-table area [aw=peso], c(m desnwho) f(%9.3f)
-*región natural
-table shregion [aw=peso], c (m desnwho) f(%9.3f) row
-table shregion, c (m desnwho) f(%9.3f) row
-
-**educ de la madre -> excluye los niños cuyas madres no residen en la vivienda ***INCOMPLETO
-recode hc61 (0/1=1 "Sin nivel/prima") (2=2 "secundaria") (3=3 "superior") (.=.) (.a=.), g(educ)
-table educ [aw=peso], c (m desnwho) f(%9.3f) row
-
-*quintil de bienestar o riqueza
-table hv270 [aw=peso] , c (m desnwho) f(%9.3f) row
-
-***juntos
-tab desnwho[iw=peso] if qh95==1
-
-*sexo
-table hv104 [aw=peso], c (m desnwho) f(%9.3f) row
-**por meses
-recode hc1 (0/5=1 "< a 6") (6/8=2 "6 a 8") (9/11=3 "9 a 11") (12/17=4 "12 a 17") (18/23=5 "18 a 23") (24/35=6 "24 a 35") (36/47=7 "36 a 47") (48/59=8), g(mes)
-
-table mes [aw=peso], c (m desnwho) f(%9.3f) row
-
-
-table dpto [aw=peso], c (m desnwho) f(%9.3f) row
-
-****desnutrición crónica severa
-g dcs=1 if hc70<-300 & hv103==1
-replace dcs=0 if hc70>=-300 & hc70<601 & hv103==1
-
-tab dcs [iw=peso]
-
-
-***establecemos el diseño muestral
-svyset hv001 [w=peso], strata(hv022)
-
-**descriptivos de la variable pobre tomando en cuenta el diseño muestral
-svy:proportion desnwho
-svy:proportion desnwho if area==1
-svy:proportion desnwho if area==2
-svy, over(area): proportion desnwho
-svy, over(shregion): proportion desnwho
-***a partir de con dc lima met es el porcentaje de niños con dc por región natural
-svy, over(ambito): proportion desnwho
-
-
-
-
-****ANEMIA
-***
-*Creando la variable anemia
-recode hc1 (6/35=1) (else=0), g(meses)
-
-g alt=(hv040/1000)*3.3
-g HAj= hc53/10 -(-0.032*alt+0.022*alt*alt)
-recode HAj (1/10.99999=1 "anemia") (11/30=0 "no anemia"), g(anemia)
-
-tab anemia [iw=peso] if hv103==1 & meses==1
-
-*****
-*cuadro 10.14b del cap_10, excel del inei no considera razón de no medición (hc13)
-*observar Sin ponderar, en niveles las cantidad coindicen
-tab area anemia if hv103==1 & meses==1, row
-*con ponderador también coinciden
-tab area anemia [iw=peso] if hv103==1 & meses==1, row
-
-**por region natural
-table shregion [iw=peso] if hv103==1 & meses==1, c(m anemia) row f(%9.3f)
-***por dpto
-table dpto [aw=peso] if hv103==1 & meses==1, c (m anemia) f(%9.5f) row
-
-**área de residencia
-table area [iw=peso] if hv103==1 & meses==1, c(m anemia) row f(%9.3f)
-
-**meses (pestaña 10.13A)
-recode hc1 (6/8=1 "6 a 8") (9/11=2 "9 a 11") (12/17=3 "12 a 17") (18/23=4 "18 a 23") (24/35=5 "24 a 35"), g(edadane)
-
-table edadane [aw=peso] if hv103==1 & meses==1, c (m anemia) f(%9.3f) row
-
-**sexo
-table hv104 [aw=peso] if hv103==1 & meses==1, c (m anemia) f(%9.3f) row
-***tipo de anemia
-tab hc57 [aw=peso] if hv103==1 & meses==1
-***tipo de anemia y quintiles de ingreso
-tab hv270 hc57 [aw=peso] if hv103==1 & meses==1, row nofreq
-
-
-**orden de nacido.
-recode hc64 (1=1 "1") (2/3=2 "2-3") (4/5=3 "4-5") (6/13=4 "6+") (.=.), g(orden)
-table orden [aw=peso] if hv103==1 & meses==1, c (m anemia) f(%9.3f) row
-
-**tratamiento del agua
-**embotellada
-table hv237g [aw=peso] if hv103==1 & meses==1, c (m anemia) f(%9.3f) row
-***completar
-
-
-***quintil de riqueza
-table hv270 [aw=peso] if hv103==1 & meses==1, c (m anemia) f(%9.3f) row
-
-****anemia de 6 a 59
-recode hc1 (6/59=1) (else=0), g(mese)
-tab anemia [iw=peso] if hv103==1 & mese==1
-***pestaña 10.14A
-tab area anemia [iw=peso] if hv103==1 & mese==1, row nofreq
-***10.14
-table shregion [iw=peso] if hv103==1 & mese==1, c(m anemia) row f(%9.3f)
-
-***programas sociales --> articulado nutricional
-tab qh95 if hv103==1 & meses==1 & qhhome==1
-table qh95 [aw=peso] if hv103==1 & meses==1, c(m anemia) row
-
-
-
-
-
-
-
-******
-*
-*
-*
 ****VIOLENCIA FAMILIAR
 
 **violencia psicológica --> el INEI lo desagrega
@@ -301,12 +104,6 @@ recode v131 (1/9=2 "nativa") (10=1 "castellano") (11/12=3 "extranjera"), g(lengu
 table lengua [aw=peso2] , c(m violenpsi) row f(%9.3f)
 
 *
-*
-*
-*
-*
-**
-
 
 **violencia física --> desagrega --> pestaña 12.3 cap_012
 ***tanto sin ponderar como ponderado cuadran los totales
